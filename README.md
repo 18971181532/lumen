@@ -202,7 +202,7 @@ S = [ 0   τ   0   jκ ]
 
 ## 模型与数值方法
 
-![Lumen pipeline](docs/lumen_flow.svg)
+![Lumen pipeline](docs/lumen_flow.png)
 
 ```text
 网表文本
@@ -328,6 +328,7 @@ lumen/
 ├── docs/
 │   ├── lumen_flow.drawio
 │   ├── lumen_flow.svg
+│   ├── lumen_flow.png
 │   ├── ring_layout.svg
 │   └── screenshots/
 ├── .github/workflows/tests.yml
