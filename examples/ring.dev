@@ -1,0 +1,8 @@
+circuit ring_add_drop
+wavelength 1550
+source laser in power=1
+ring r in through add drop radius=10u neff=2.4 ng=4.2 k=0.2 loss=1
+monitor mt through
+monitor md drop
+.sweep 1540 1560 0.05
+.end

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen · 光子集成电路 S 参数工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1220'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%2322d3ee' stroke-width='2'/%3E%3Cpath d='M16 4v8M16 20v8M4 16h8M20 16h8' stroke='%23a78bfa' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div>
+        <h1>Lumen</h1>
+        <p>hierarchical photonic S-parameter lab</p>
+      </div>
+    </div>
+    <div class="topmeta">
+      <span id="metaTitle">未加载网表</span>
+      <span id="metaPoints" class="dim"></span>
+      <span id="metaTime" class="dim"></span>
+    </div>
+    <button id="runBtn" class="primary">Run circuit <kbd>⌘↵</kbd></button>
+  </header>
+
+  <aside class="editor">
+    <div class="panel-head">
+      <span class="label">NETLIST</span>
+      <select id="exampleSelect" aria-label="examples"></select>
+    </div>
+    <textarea id="netlist" spellcheck="false" autocomplete="off"></textarea>
+    <div class="sweep-row">
+      <label>λ start <input id="start" placeholder="netlist" inputmode="decimal"></label>
+      <label>λ stop <input id="stop" placeholder="netlist" inputmode="decimal"></label>
+      <label>step <input id="step" placeholder="netlist" inputmode="decimal"></label>
+    </div>
+    <div class="editor-foot">
+      <button id="parseBtn" class="ghost">Parse only</button>
+      <span id="status" class="status">ready</span>
+    </div>
+    <div id="parseInfo" class="parse-info">
+      <div class="empty-hint">加载示例或粘贴网表，按 Run 开始求解。</div>
+    </div>
+  </aside>
+
+  <main class="results">
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="circuit">电路</button>
+      <button class="tab" data-tab="spectrum">光谱</button>
+      <button class="tab" data-tab="group">群延迟</button>
+      <button class="tab" data-tab="smatrix">S 矩阵</button>
+      <button class="tab" data-tab="tolerance">容差</button>
+      <button class="tab" data-tab="reference">参考</button>
+    </nav>
+
+    <section class="tabpane active" id="pane-circuit">
+      <div class="card">
+        <div class="card-head">
+          <h2>自动版图示意</h2>
+          <span class="hint">分层网表 → 源/器件/监视器分层布局；虚线为反馈边</span>
+        </div>
+        <div id="schematic" class="schematic"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>展开后的原语</h2><span class="hint" id="primCount"></span></div>
+        <div id="primTable" class="table-wrap"></div>
+      </div>
+    </section>
+
+    <section class="tabpane" id="pane-spectrum">
+      <div class="card">
+        <div class="card-head">
+          <h2>传输光谱</h2>
+          <div id="monitorChips" class="chips"></div>
+        </div>
+        <div id="spectrumChart" class="chart"></div>
+        <div id="spectrumLegend" class="legend"></div>
+      </div>
+      <div id="metricGrid" class="metric-grid"></div>
+    </section>
+
+    <section class="tabpane" id="pane-group">
+      <div class="card">
+        <div class="card-head">
+          <h2>群延迟 τ<sub>g</sub></h2>
+          <span class="hint">τ<sub>g</sub> = λ² / (2πc) · dφ/dλ，相位已解卷绕</span>
+        </div>
+        <div id="groupChart" class="chart"></div>
+        <div id="groupLegend" class="legend"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>峰值群延迟</h2></div>
+        <div id="groupStats" class="metric-grid small"></div>
+      </div>
+    </section>
+
+    <section class="tabpane" id="pane-smatrix">
+      <div class="card">
+        <div class="card-head">
+          <h2>N 端口 S 矩阵</h2>
+          <div class="row">
+            <label class="inline">λ (nm) <input id="smLambda" value="1550" inputmode="decimal"></label>
+            <button id="smRefresh" class="ghost small">刷新</button>
+            <div class="seg" id="smMode">
+              <button data-mode="db" class="active">幅值 dB</button>
+              <button data-mode="phase">相位 °</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint" id="smHint">没有声明外部 <code>port</code> 时，此标签页会提示添加端口。</div>
+        <div id="smHeatmap" class="heatmap"></div>
+        <div id="smErrors" class="metric-grid small"></div>
+      </div>
+      <div class="card" id="smInspectorCard">
+        <div class="card-head"><h2>列切片</h2><span class="hint">点击热图单元格查看复数 S<sub>ij</sub></span></div>
+        <div id="smInspector" class="mono dim">尚未选择。</div>
+      </div>
+    </section>
+
+    <section class="tabpane" id="pane-tolerance">
+      <div class="card">
+        <div class="card-head">
+          <h2>制造容差蒙特卡洛</h2>
+          <span class="hint">扰动半径/长度、有效折射率与耦合比，统计共振漂移</span>
+        </div>
+        <div class="tol-controls">
+          <label>runs <input id="tolRuns" value="80" inputmode="numeric"></label>
+          <label>σ length (nm) <input id="tolLen" value="2" inputmode="decimal"></label>
+          <label>σ n<sub>eff</sub> <input id="tolNeff" value="0.002" inputmode="decimal"></label>
+          <label>σ k <input id="tolK" value="0.005" inputmode="decimal"></label>
+          <label>metric
+            <select id="tolMetric">
+              <option value="shift">共振漂移 (nm)</option>
+              <option value="loss">中心插损 (dB)</option>
+              <option value="er">消光比 (dB)</option>
+            </select>
+          </label>
+          <label>seed <input id="tolSeed" value="12345" inputmode="numeric"></label>
+          <button id="tolRun" class="primary small">Run Monte Carlo</button>
+        </div>
+        <div id="tolChart" class="chart"></div>
+        <div id="tolStats" class="metric-grid small"></div>
+      </div>
+    </section>
+
+    <section class="tabpane" id="pane-reference">
+      <div class="reference-grid">
+        <div class="card">
+          <div class="card-head"><h2>网表语法</h2></div>
+          <pre class="code">circuit   &lt;title&gt;
+wavelength &lt;nm&gt;
+source    laser in power=1 phase=0
+wg        w1 in out length=100u neff=2.4 ng=4.2 loss=2
+coupler   c1 in thru spare cross k=0.5 loss=0.1
+atten     a1 in out loss=3
+mzi       m1 in bar cross dL=20u k1=.5 k2=.5
+ring      r1 in through add drop radius=10u k=0.2
+monitor   m1 out
+port      in
+.sweep    1500 1600 0.25
+.end</pre>
+          <p class="note">长度键 <code>length / dl / radius / lam0 / arm</code> 支持 SPICE 后缀：<code>u n p m k</code>。用户网名不能包含 <code>@</code>（保留给子电路内部节点）。</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>模型约定</h2></div>
+          <table class="ref-table">
+            <tr><th>元素</th><th>模型</th></tr>
+            <tr><td>波导</td><td>φ = 2π n<sub>eff</sub>L/λ − phase；n<sub>eff</sub>(λ) 线性色散，端点 n<sub>g</sub></td></tr>
+            <tr><td>耦合器</td><td>τ=√(1−K)，κ=√K，交叉项 +jκ，可选 excess loss</td></tr>
+            <tr><td>微环</td><td>两只耦合器 + 两段 πR 弧，反馈由线性求解精确得到</td></tr>
+            <tr><td>MZI</td><td>两只耦合器 + 两臂 L 与 L+ΔL</td></tr>
+            <tr><td>端口</td><td>未连接端口视为匹配吸收；单模净最多两个端口</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>求解器基准</h2><span class="hint">纯 Python 复数 LU，部分主元</span></div>
+          <div class="row">
+            <label class="inline">stages <input id="benchStages" value="4" inputmode="numeric"></label>
+            <label class="inline">points <input id="benchPoints" value="21" inputmode="numeric"></label>
+            <button id="benchRun" class="ghost small">运行</button>
+          </div>
+          <div id="benchOut" class="mono dim">—</div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>边界声明</h2></div>
+          <p class="note">教学级理想模型：忽略温度、损耗色散细节、偏振、多模、反射与噪声；未连接端口按匹配端处理。结果适合做拓扑/量级验证与设计探索，<b>不可用于流片签核</b>。Web 服务仅绑定 127.0.0.1，无认证与 TLS。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

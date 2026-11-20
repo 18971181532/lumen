@@ -1,0 +1,8 @@
+circuit mzi_balanced
+wavelength 1550
+source laser in power=1
+mzi m in bar cross dL=20u k1=0.5 k2=0.5 neff=2.4 ng=4.2 loss=2
+monitor mb bar
+monitor mc cross
+.sweep 1500 1600 0.25
+.end

@@ -1,0 +1,8 @@
+circuit ring_tolerance
+wavelength 1552.63
+source laser in power=1
+ring r in through add drop radius=10u neff=2.4 ng=4.2 k=0.2 loss=1
+monitor md drop
+monitor mt through
+.sweep 1551.9 1553.3 0.02
+.end

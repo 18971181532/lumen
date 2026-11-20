@@ -1,0 +1,9 @@
+circuit vernier_cascade
+wavelength 1550
+source laser in power=1
+ring r1 in through1 add1 drop1 radius=10u neff=2.4 ng=4.2 k=0.1 loss=1
+ring r2 drop1 through2 add2 drop2 radius=10.4u neff=2.4 ng=4.2 k=0.1 loss=1
+monitor mt through2
+monitor md drop2
+.sweep 1520 1580 0.02
+.end

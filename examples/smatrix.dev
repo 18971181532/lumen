@@ -1,0 +1,9 @@
+circuit ring_smatrix
+wavelength 1550
+port in
+port through
+port add
+port drop
+ring r in through add drop radius=10u neff=2.4 ng=4.2 k=0.2 loss=1
+.sweep 1540 1560 0.05
+.end
